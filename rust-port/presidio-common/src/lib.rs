@@ -36,3 +36,4 @@ pub mod utils;
 pub use error::{PresidioError, Result};
 pub use types::*;
 pub use traits::*;
+pub use utils::{luhn_checksum, remove_duplicates, merge_overlapping, ConflictResolutionStrategy};

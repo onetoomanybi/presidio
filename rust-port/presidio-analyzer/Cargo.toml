@@ -1,6 +1,25 @@
 [package]
 name = "presidio-analyzer"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
 
 [dependencies]
+presidio-common.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+once_cell.workspace = true
+lazy_static.workspace = true
+phonenumber.workspace = true
+url.workspace = true
+ipnetwork.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
