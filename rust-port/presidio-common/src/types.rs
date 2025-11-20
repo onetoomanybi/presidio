@@ -226,6 +226,7 @@ impl Language {
     }
 
     /// Parses a language from a string.
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "en" | "english" => Some(Language::En),
@@ -377,6 +378,7 @@ impl EntityType {
     }
 
     /// Parses an entity type from a string.
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Self {
         match s.to_uppercase().as_str() {
             "EMAIL" => EntityType::Email,

@@ -24,7 +24,7 @@ impl AnalyzerEngine {
     }
 
     /// Creates a new analyzer engine with default recognizers.
-    pub fn default() -> Self {
+    pub fn with_defaults() -> Self {
         Self::new(RecognizerRegistry::with_defaults())
     }
 
@@ -120,6 +120,12 @@ impl AnalyzerEngine {
     /// Returns a mutable reference to the recognizer registry.
     pub fn registry_mut(&mut self) -> &mut RecognizerRegistry {
         &mut self.registry
+    }
+}
+
+impl Default for AnalyzerEngine {
+    fn default() -> Self {
+        Self::with_defaults()
     }
 }
 
