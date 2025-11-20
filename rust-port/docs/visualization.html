@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presidio Rust Architecture - Interactive Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f5f5f5;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px 20px;
+            cursor: pointer;
+            text-align: center;
+            background: #f5f5f5;
+            border: none;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+            color: #666;
+        }
+
+        .tab:hover {
+            background: #e0e0e0;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #component-diagram {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+
+        .component-box {
+            fill: #667eea;
+            stroke: #4c51bf;
+            stroke-width: 2;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .component-box:hover {
+            fill: #764ba2;
+            transform: scale(1.05);
+        }
+
+        .component-text {
+            fill: white;
+            font-size: 14px;
+            font-weight: 600;
+            pointer-events: none;
+        }
+
+        .link {
+            fill: none;
+            stroke: #999;
+            stroke-width: 2;
+            marker-end: url(#arrowhead);
+        }
+
+        .link.highlighted {
+            stroke: #667eea;
+            stroke-width: 3;
+        }
+
+        .info-panel {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .info-panel.show {
+            display: block;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .info-panel h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .info-panel ul {
+            margin-left: 20px;
+        }
+
+        .info-panel li {
+            margin: 5px 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 3em;
+            font-weight: bold;
+            display: block;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            font-size: 1em;
+            opacity: 0.9;
+        }
+
+        .flow-step {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .flow-step::before {
+            content: attr(data-step);
+            position: absolute;
+            left: -15px;
+            top: -15px;
+            background: #667eea;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .flow-step h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .mermaid-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        button.interactive-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 10px 5px;
+            transition: all 0.3s;
+        }
+
+        button.interactive-btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔒 Presidio Rust Architecture</h1>
+            <p class="subtitle">Interactive Visualization of PII Detection & Anonymization System</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('overview')">Overview</button>
+            <button class="tab" onclick="showTab('components')">Components</button>
+            <button class="tab" onclick="showTab('dataflow')">Data Flow</button>
+            <button class="tab" onclick="showTab('stats')">Statistics</button>
+        </div>
+
+        <div class="content">
+            <!-- Overview Tab -->
+            <div id="overview" class="tab-content active">
+                <h2>System Overview</h2>
+                <p style="margin: 20px 0;">
+                    Presidio Rust is a high-performance PII (Personally Identifiable Information) detection and anonymization library ported from Python to Rust. It leverages Rust's safety guarantees and performance characteristics to provide a production-ready solution for data privacy.
+                </p>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-number">6</span>
+                        <span class="stat-label">Core Crates</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">5</span>
+                        <span class="stat-label">Built-in Recognizers</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">40+</span>
+                        <span class="stat-label">Entity Types</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">6</span>
+                        <span class="stat-label">Anonymization Operators</span>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 40px;">Key Features</h3>
+                <ul style="margin: 20px 0; line-height: 2;">
+                    <li>✅ <strong>Context-Aware Detection:</strong> Uses surrounding text to boost confidence scores</li>
+                    <li>✅ <strong>Multi-Language Support:</strong> Supports 11 languages out of the box</li>
+                    <li>✅ <strong>Validation:</strong> Checksums (Luhn) and format validation for accuracy</li>
+                    <li>✅ <strong>Extensible:</strong> Plugin system for custom recognizers and operators</li>
+                    <li>✅ <strong>Thread-Safe:</strong> Designed for concurrent processing</li>
+                    <li>✅ <strong>Zero-Cost Abstractions:</strong> Performance without compromise</li>
+                </ul>
+            </div>
+
+            <!-- Components Tab -->
+            <div id="components" class="tab-content">
+                <h2>Component Architecture</h2>
+                <p>Click on components to view details:</p>
+
+                <svg id="component-diagram"></svg>
+
+                <div id="component-info" class="info-panel"></div>
+            </div>
+
+            <!-- Data Flow Tab -->
+            <div id="dataflow" class="tab-content">
+                <h2>Data Flow Process</h2>
+
+                <div class="flow-step" data-step="1">
+                    <h4>Input Text Reception</h4>
+                    <p>The system receives raw text containing potential PII through the <code>AnalyzerEngine</code>.</p>
+                </div>
+
+                <div class="flow-step" data-step="2">
+                    <h4>NLP Processing (Optional)</h4>
+                    <p>If an NLP engine is configured, the text is processed to extract linguistic features like tokens, lemmas, POS tags, and named entities.</p>
+                </div>
+
+                <div class="flow-step" data-step="3">
+                    <h4>Recognizer Selection</h4>
+                    <p>The <code>RecognizerRegistry</code> returns all recognizers that support the specified language and entity types.</p>
+                </div>
+
+                <div class="flow-step" data-step="4">
+                    <h4>Pattern Matching</h4>
+                    <p>Each recognizer runs its detection logic (regex patterns, validation, etc.) and returns potential matches with confidence scores.</p>
+                </div>
+
+                <div class="flow-step" data-step="5">
+                    <h4>Context Enhancement</h4>
+                    <p>Scores are enhanced based on surrounding context words. For example, "email" near an email address boosts confidence.</p>
+                </div>
+
+                <div class="flow-step" data-step="6">
+                    <h4>Deduplication & Filtering</h4>
+                    <p>Overlapping and duplicate results are removed, keeping only the highest-scored detections. Results below the score threshold are filtered out.</p>
+                </div>
+
+                <div class="flow-step" data-step="7">
+                    <h4>Anonymization (Optional)</h4>
+                    <p>Detected entities are passed to the <code>AnonymizerEngine</code> which applies operators (Replace, Redact, Mask, Hash, Encrypt) to transform the PII.</p>
+                </div>
+
+                <div class="flow-step" data-step="8">
+                    <h4>Result Return</h4>
+                    <p>The final results (analysis or anonymized text) are returned to the caller.</p>
+                </div>
+
+                <h3 style="margin-top: 40px;">Interactive Demo</h3>
+                <button class="interactive-btn" onclick="runAnalysisDemo()">Run Analysis Demo</button>
+                <button class="interactive-btn" onclick="runAnonymizationDemo()">Run Anonymization Demo</button>
+                <div id="demo-output" style="margin-top: 20px; padding: 20px; background: #f5f5f5; border-radius: 5px; display: none;"></div>
+            </div>
+
+            <!-- Statistics Tab -->
+            <div id="stats" class="tab-content">
+                <h2>Project Statistics</h2>
+
+                <h3>Crate Breakdown</h3>
+                <div style="margin: 20px 0;">
+                    <div style="margin: 10px 0;"><strong>presidio-common:</strong> 982 lines (types, traits, utils)</div>
+                    <div style="margin: 10px 0;"><strong>presidio-analyzer:</strong> 1338 lines (recognizers, engine)</div>
+                    <div style="margin: 10px 0;"><strong>presidio-anonymizer:</strong> Pending implementation</div>
+                    <div style="margin: 10px 0;"><strong>presidio-image-redactor:</strong> Pending implementation</div>
+                    <div style="margin: 10px 0;"><strong>presidio-structured:</strong> Pending implementation</div>
+                    <div style="margin: 10px 0;"><strong>presidio-cli:</strong> Pending implementation</div>
+                </div>
+
+                <h3 style="margin-top: 30px;">Test Coverage</h3>
+                <div style="margin: 20px 0;">
+                    <div style="margin: 10px 0;"><strong>presidio-common:</strong> 9 tests, all passing</div>
+                    <div style="margin: 10px 0;"><strong>presidio-analyzer:</strong> 24 tests, all passing</div>
+                    <div style="margin: 10px 0;"><strong>Total:</strong> 33 unit tests + integration tests</div>
+                </div>
+
+                <h3 style="margin-top: 30px;">Supported Entity Types</h3>
+                <div class="stats-grid" style="margin-top: 20px;">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                        <span class="stat-label">Generic</span>
+                        <span class="stat-number">12</span>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                        <span class="stat-label">US-Specific</span>
+                        <span class="stat-number">6</span>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                        <span class="stat-label">UK-Specific</span>
+                        <span class="stat-number">2</span>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                        <span class="stat-label">International</span>
+                        <span class="stat-number">20+</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: false });
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+
+            // Initialize component diagram if components tab is shown
+            if (tabName === 'components') {
+                setTimeout(initComponentDiagram, 100);
+            }
+        }
+
+        function initComponentDiagram() {
+            const svg = d3.select("#component-diagram");
+            svg.selectAll("*").remove();
+
+            const width = document.getElementById('component-diagram').clientWidth;
+            const height = 600;
+
+            svg.attr("width", width).attr("height", height);
+
+            // Define arrow marker
+            svg.append("defs").append("marker")
+                .attr("id", "arrowhead")
+                .attr("markerWidth", 10)
+                .attr("markerHeight", 10)
+                .attr("refX", 9)
+                .attr("refY", 3)
+                .attr("orient", "auto")
+                .append("polygon")
+                .attr("points", "0 0, 10 3, 0 6")
+                .attr("fill", "#999");
+
+            const components = [
+                { id: "common", name: "presidio-common", x: width/2, y: 50, desc: "Core types, traits, and utilities" },
+                { id: "analyzer", name: "presidio-analyzer", x: width/4, y: 200, desc: "PII detection engine with 5 recognizers" },
+                { id: "anonymizer", name: "presidio-anonymizer", x: width*3/4, y: 200, desc: "PII transformation engine" },
+                { id: "registry", name: "RecognizerRegistry", x: width/4, y: 350, desc: "Manages all recognizers" },
+                { id: "recognizers", name: "Recognizers", x: width/4, y: 500, desc: "Email, Phone, Credit Card, IP, URL" },
+                { id: "operators", name: "Operators", x: width*3/4, y: 350, desc: "Replace, Redact, Mask, Hash, Encrypt" },
+            ];
+
+            const links = [
+                { source: "analyzer", target: "common" },
+                { source: "anonymizer", target: "common" },
+                { source: "analyzer", target: "registry" },
+                { source: "registry", target: "recognizers" },
+                { source: "anonymizer", target: "operators" },
+            ];
+
+            // Draw links
+            const linkSelection = svg.selectAll(".link")
+                .data(links)
+                .enter().append("line")
+                .attr("class", "link")
+                .attr("x1", d => components.find(c => c.id === d.source).x)
+                .attr("y1", d => components.find(c => c.id === d.source).y + 40)
+                .attr("x2", d => components.find(c => c.id === d.target).x)
+                .attr("y2", d => components.find(c => c.id === d.target).y - 40);
+
+            // Draw components
+            const g = svg.selectAll(".component")
+                .data(components)
+                .enter().append("g")
+                .attr("class", "component")
+                .attr("transform", d => `translate(${d.x},${d.y})`)
+                .on("click", function(event, d) {
+                    showComponentInfo(d);
+                    d3.selectAll(".component-box").style("opacity", 0.6);
+                    d3.select(this).select(".component-box").style("opacity", 1);
+                });
+
+            g.append("rect")
+                .attr("class", "component-box")
+                .attr("x", -80)
+                .attr("y", -30)
+                .attr("width", 160)
+                .attr("height", 60)
+                .attr("rx", 10);
+
+            g.append("text")
+                .attr("class", "component-text")
+                .attr("text-anchor", "middle")
+                .attr("dy", "0.35em")
+                .text(d => d.name);
+        }
+
+        function showComponentInfo(component) {
+            const infoPanel = document.getElementById('component-info');
+            const details = {
+                "common": {
+                    title: "presidio-common",
+                    features: [
+                        "40+ EntityType variants",
+                        "11 Language support",
+                        "RecognizerResult with overlap detection",
+                        "Luhn checksum validation",
+                        "Thread-safe design (Send + Sync)"
+                    ]
+                },
+                "analyzer": {
+                    title: "presidio-analyzer",
+                    features: [
+                        "Context-aware PII detection",
+                        "NLP engine integration support",
+                        "Score threshold filtering",
+                        "Automatic deduplication",
+                        "5 built-in recognizers"
+                    ]
+                },
+                "anonymizer": {
+                    title: "presidio-anonymizer",
+                    features: [
+                        "6 transformation operators",
+                        "Conflict resolution strategies",
+                        "Reversible anonymization support",
+                        "Custom operator support",
+                        "Batch processing"
+                    ]
+                },
+                "registry": {
+                    title: "RecognizerRegistry",
+                    features: [
+                        "Dynamic recognizer management",
+                        "Language-based filtering",
+                        "Entity type filtering",
+                        "Arc-based sharing",
+                        "Default recognizer loading"
+                    ]
+                },
+                "recognizers": {
+                    title: "Built-in Recognizers",
+                    features: [
+                        "EmailRecognizer (context-aware)",
+                        "CreditCardRecognizer (Luhn validation)",
+                        "PhoneRecognizer (US format)",
+                        "IpAddressRecognizer (IPv4/IPv6)",
+                        "UrlRecognizer (HTTP/HTTPS)"
+                    ]
+                },
+                "operators": {
+                    title: "Anonymization Operators",
+                    features: [
+                        "Replace: Substitute with custom value",
+                        "Redact: Complete removal",
+                        "Mask: Partial character masking",
+                        "Hash: SHA-256/SHA-512 hashing",
+                        "Encrypt: AES-GCM encryption"
+                    ]
+                }
+            };
+
+            const info = details[component.id];
+            if (info) {
+                infoPanel.innerHTML = `
+                    <h3>${info.title}</h3>
+                    <p>${component.desc}</p>
+                    <h4>Key Features:</h4>
+                    <ul>
+                        ${info.features.map(f => `<li>${f}</li>`).join('')}
+                    </ul>
+                `;
+                infoPanel.classList.add('show');
+            }
+        }
+
+        function runAnalysisDemo() {
+            const output = document.getElementById('demo-output');
+            output.style.display = 'block';
+            output.innerHTML = `
+                <h4>🔍 Analysis Demo</h4>
+                <p><strong>Input:</strong> "Contact me at john@example.com or call 555-123-4567"</p>
+                <p><strong>Processing...</strong></p>
+            `;
+
+            setTimeout(() => {
+                output.innerHTML += `
+                    <p><strong>Results:</strong></p>
+                    <div style="background: white; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                        <p>✅ <strong>Entity 1:</strong> EMAIL at position 14-31 (score: 0.9)</p>
+                        <p>&nbsp;&nbsp;&nbsp;Text: "john@example.com"</p>
+                        <p>✅ <strong>Entity 2:</strong> PHONE at position 40-52 (score: 0.8)</p>
+                        <p>&nbsp;&nbsp;&nbsp;Text: "555-123-4567"</p>
+                    </div>
+                `;
+            }, 1000);
+        }
+
+        function runAnonymizationDemo() {
+            const output = document.getElementById('demo-output');
+            output.style.display = 'block';
+            output.innerHTML = `
+                <h4>🔒 Anonymization Demo</h4>
+                <p><strong>Input:</strong> "My card number is 4532 0151 1283 0366"</p>
+                <p><strong>Processing...</strong></p>
+            `;
+
+            setTimeout(() => {
+                output.innerHTML += `
+                    <p><strong>Anonymized Result (Mask operator):</strong></p>
+                    <div style="background: white; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                        <p>"My card number is **** **** **** 0366"</p>
+                    </div>
+                    <p style="margin-top: 10px;"><strong>Alternative (Hash operator):</strong></p>
+                    <div style="background: white; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                        <p>"My card number is a3f5c8b2e9d1..."</p>
+                    </div>
+                `;
+            }, 1000);
+        }
+
+        // Initialize component diagram on page load
+        window.addEventListener('load', () => {
+            setTimeout(initComponentDiagram, 100);
+        });
+    </script>
+</body>
+</html>
