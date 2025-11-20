@@ -11,6 +11,7 @@ rust-version.workspace = true
 [[bin]]
 name = "presidio-analyzer-api"
 path = "src/bin/api.rs"
+required-features = ["api"]
 
 [dependencies]
 presidio-common.workspace = true

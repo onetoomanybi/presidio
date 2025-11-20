@@ -106,14 +106,13 @@ async fn analyze_handler(
 
     // Parse language
     let language = Language::from_str(&request.language)
-        .map_err(|e| (StatusCode::BAD_REQUEST, format!("Invalid language: {}", e)))?;
+        .ok_or_else(|| (StatusCode::BAD_REQUEST, format!("Invalid language: {}", request.language)))?;
 
     // Parse entity types if provided
     let entities = if let Some(entity_strs) = request.entities {
         let mut parsed_entities = Vec::new();
         for entity_str in entity_strs {
-            let entity = EntityType::from_str(&entity_str)
-                .map_err(|e| (StatusCode::BAD_REQUEST, format!("Invalid entity: {}", e)))?;
+            let entity = EntityType::from_str(&entity_str);
             parsed_entities.push(entity);
         }
         Some(parsed_entities)

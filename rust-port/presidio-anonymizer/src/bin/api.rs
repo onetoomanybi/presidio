@@ -35,7 +35,7 @@ struct AnonymizeRequest {
 }
 
 fn default_conflict_resolution() -> String {
-    "merge_first_before_second".to_string()
+    "highest_score".to_string()
 }
 
 #[derive(Debug, Deserialize)]
@@ -118,8 +118,7 @@ async fn anonymize_handler(
     // Convert DTOs to internal types
     let mut analyzer_results = Vec::new();
     for dto in request.analyzer_results {
-        let entity_type = EntityType::from_str(&dto.entity_type)
-            .map_err(|e| (StatusCode::BAD_REQUEST, format!("Invalid entity type: {}", e)))?;
+        let entity_type = EntityType::from_str(&dto.entity_type);
 
         analyzer_results.push(RecognizerResult {
             entity_type,
@@ -134,21 +133,21 @@ async fn anonymize_handler(
     // Convert operator configs
     let mut operators = HashMap::new();
     for (entity_str, op_config) in request.anonymizers {
-        let entity_type = EntityType::from_str(&entity_str)
-            .map_err(|e| (StatusCode::BAD_REQUEST, format!("Invalid entity type: {}", e)))?;
+        let entity_type = EntityType::from_str(&entity_str);
         operators.insert(entity_type, (op_config.operator_type, op_config.params));
     }
 
     // Parse conflict resolution strategy
     let conflict_resolution = match request.conflict_resolution.as_str() {
-        "merge_first_before_second" => ConflictResolutionStrategy::MergeFirstBeforeSecond,
-        "merge_similar_or_contained" => ConflictResolutionStrategy::MergeSimilarOrContained,
-        "remove_intersections" => ConflictResolutionStrategy::RemoveIntersections,
+        "highest_score" => ConflictResolutionStrategy::HighestScore,
+        "longest" => ConflictResolutionStrategy::Longest,
+        "first" => ConflictResolutionStrategy::First,
+        "last" => ConflictResolutionStrategy::Last,
         _ => {
             return Err((
                 StatusCode::BAD_REQUEST,
                 format!(
-                    "Invalid conflict resolution strategy: {}",
+                    "Invalid conflict resolution strategy: {}. Valid options: highest_score, longest, first, last",
                     request.conflict_resolution
                 ),
             ))

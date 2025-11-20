@@ -101,14 +101,13 @@ fn main() -> Result<()> {
 
     // Parse language
     let language = Language::from_str(&cli.language)
-        .with_context(|| format!("Invalid language: {}", cli.language))?;
+        .ok_or_else(|| anyhow::anyhow!("Invalid language: {}", cli.language))?;
 
     // Parse entity types if specified
     let entities = if let Some(entity_strs) = &cli.entities {
         let mut parsed = Vec::new();
         for entity_str in entity_strs {
-            let entity = EntityType::from_str(entity_str)
-                .with_context(|| format!("Invalid entity type: {}", entity_str))?;
+            let entity = EntityType::from_str(entity_str);
             parsed.push(entity);
         }
         Some(parsed)
