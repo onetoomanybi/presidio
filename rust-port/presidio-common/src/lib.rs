@@ -31,9 +31,11 @@ pub mod error;
 pub mod types;
 pub mod traits;
 pub mod utils;
+pub mod config;
 
 // Re-export commonly used items
 pub use error::{PresidioError, Result};
 pub use types::*;
 pub use traits::*;
 pub use utils::{luhn_checksum, remove_duplicates, merge_overlapping, ConflictResolutionStrategy};
+pub use config::{RecognizerConfig, PatternConfig, PresidioConfig, GlobalSettings};
