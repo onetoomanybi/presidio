@@ -8,6 +8,10 @@ repository.workspace = true
 homepage.workspace = true
 rust-version.workspace = true
 
+[[bin]]
+name = "presidio-anonymizer-api"
+path = "src/bin/api.rs"
+
 [dependencies]
 presidio-common.workspace = true
 serde.workspace = true
@@ -16,3 +20,19 @@ thiserror.workspace = true
 anyhow.workspace = true
 sha2.workspace = true
 aes-gcm.workspace = true
+
+# Web service dependencies
+axum = { workspace = true, optional = true }
+tower = { workspace = true, optional = true }
+tower-http = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, optional = true }
+
+# Batch processing
+rayon = { workspace = true, optional = true }
+
+[features]
+default = []
+api = ["axum", "tower", "tower-http", "tokio", "tracing", "tracing-subscriber"]
+batch = ["rayon"]

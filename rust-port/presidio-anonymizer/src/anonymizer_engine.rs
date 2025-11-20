@@ -195,6 +195,56 @@ impl AnonymizerEngine {
     pub fn get_operators(&self) -> Vec<String> {
         self.operators.keys().cloned().collect()
     }
+
+    /// Anonymizes multiple texts in parallel.
+    ///
+    /// This is more efficient than calling `anonymize` multiple times sequentially
+    /// as it processes texts concurrently.
+    ///
+    /// # Arguments
+    ///
+    /// * `batch_data` - Vector of (text, analyzer_results, operators) tuples
+    /// * `conflict_resolution` - Strategy for handling overlapping entities
+    ///
+    /// # Returns
+    ///
+    /// A vector of anonymization results, one for each input.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use presidio_anonymizer::AnonymizerEngine;
+    /// use presidio_common::{RecognizerResult, EntityType, ConflictResolutionStrategy};
+    /// use std::collections::HashMap;
+    /// use serde_json::json;
+    ///
+    /// let engine = AnonymizerEngine::with_defaults();
+    ///
+    /// let batch = vec![
+    ///     ("Email: john@example.com".to_string(), vec![], HashMap::new()),
+    ///     ("Phone: 555-1234".to_string(), vec![], HashMap::new()),
+    /// ];
+    ///
+    /// let results = engine.anonymize_batch(
+    ///     batch,
+    ///     ConflictResolutionStrategy::HighestScore
+    /// ).unwrap();
+    /// ```
+    #[cfg(feature = "batch")]
+    pub fn anonymize_batch(
+        &self,
+        batch_data: Vec<(String, Vec<RecognizerResult>, HashMap<EntityType, (String, Value)>)>,
+        conflict_resolution: ConflictResolutionStrategy,
+    ) -> Result<Vec<EngineResult>> {
+        use rayon::prelude::*;
+
+        batch_data
+            .par_iter()
+            .map(|(text, results, operators)| {
+                self.anonymize(text, results, operators, conflict_resolution)
+            })
+            .collect()
+    }
 }
 
 impl Default for AnonymizerEngine {

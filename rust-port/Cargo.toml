@@ -91,6 +91,10 @@ tldextract = "0.7"
 once_cell = "1.20"
 lazy_static = "1.5"
 
+# Terminal UI
+termcolor = "1.4"
+indicatif = "0.17"
+
 [profile.dev]
 opt-level = 0
 debug = true

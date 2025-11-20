@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  analyzer:
+    build:
+      context: .
+      dockerfile: presidio-analyzer/Dockerfile
+    container_name: presidio-analyzer
+    ports:
+      - "3000:3000"
+    environment:
+      - PRESIDIO_ANALYZER_ADDR=0.0.0.0:3000
+      - RUST_LOG=info
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  anonymizer:
+    build:
+      context: .
+      dockerfile: presidio-anonymizer/Dockerfile
+    container_name: presidio-anonymizer
+    ports:
+      - "3001:3001"
+    environment:
+      - PRESIDIO_ANONYMIZER_ADDR=0.0.0.0:3001
+      - RUST_LOG=info
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+networks:
+  default:
+    name: presidio-network

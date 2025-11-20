@@ -1,6 +1,34 @@
 [package]
 name = "presidio-cli"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
 
 [dependencies]
+presidio-common.workspace = true
+presidio-analyzer.workspace = true
+presidio-anonymizer.workspace = true
+
+# CLI parsing
+clap.workspace = true
+
+# File traversal and parallel processing
+walkdir.workspace = true
+rayon.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Error handling
+anyhow.workspace = true
+
+# Terminal colors
+termcolor = "1.4"
+
+# Progress bar
+indicatif = "0.17"

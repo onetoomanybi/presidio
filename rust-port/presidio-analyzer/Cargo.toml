@@ -8,6 +8,10 @@ repository.workspace = true
 homepage.workspace = true
 rust-version.workspace = true
 
+[[bin]]
+name = "presidio-analyzer-api"
+path = "src/bin/api.rs"
+
 [dependencies]
 presidio-common.workspace = true
 regex.workspace = true
@@ -21,5 +25,21 @@ phonenumber.workspace = true
 url.workspace = true
 ipnetwork.workspace = true
 
+# Web service dependencies
+axum = { workspace = true, optional = true }
+tower = { workspace = true, optional = true }
+tower-http = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, optional = true }
+
+# Batch processing
+rayon = { workspace = true, optional = true }
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }
+
+[features]
+default = []
+api = ["axum", "tower", "tower-http", "tokio", "tracing", "tracing-subscriber"]
+batch = ["rayon"]

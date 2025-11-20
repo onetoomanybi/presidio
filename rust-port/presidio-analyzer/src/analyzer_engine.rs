@@ -121,6 +121,66 @@ impl AnalyzerEngine {
     pub fn registry_mut(&mut self) -> &mut RecognizerRegistry {
         &mut self.registry
     }
+
+    /// Returns a list of all registered recognizer names.
+    pub fn get_recognizers(&self) -> Vec<String> {
+        self.registry.get_recognizer_names()
+    }
+
+    /// Analyzes multiple texts in parallel and returns results for each.
+    ///
+    /// This is more efficient than calling `analyze` multiple times sequentially
+    /// as it processes texts concurrently.
+    ///
+    /// # Arguments
+    ///
+    /// * `texts` - Vector of texts to analyze
+    /// * `language` - The language of the texts
+    /// * `entities` - Optional filter for specific entity types
+    /// * `score_threshold` - Minimum confidence score (0.0 to 1.0)
+    ///
+    /// # Returns
+    ///
+    /// A vector of result vectors, one for each input text.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use presidio_analyzer::AnalyzerEngine;
+    /// use presidio_common::Language;
+    ///
+    /// let engine = AnalyzerEngine::with_defaults();
+    /// let texts = vec![
+    ///     "Email: john@example.com".to_string(),
+    ///     "Phone: 555-1234".to_string(),
+    /// ];
+    ///
+    /// let results = engine.analyze_batch(texts, Language::En, None, 0.5).unwrap();
+    /// ```
+    #[cfg(feature = "batch")]
+    pub fn analyze_batch(
+        &self,
+        texts: Vec<String>,
+        language: Language,
+        entities: Option<&[EntityType]>,
+        score_threshold: f32,
+    ) -> Result<Vec<Vec<RecognizerResult>>> {
+        use rayon::prelude::*;
+
+        texts
+            .par_iter()
+            .map(|text| {
+                self.analyze(
+                    text,
+                    language,
+                    entities,
+                    None,
+                    score_threshold,
+                    false,
+                )
+            })
+            .collect()
+    }
 }
 
 impl Default for AnalyzerEngine {
